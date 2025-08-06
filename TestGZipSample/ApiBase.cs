@@ -1,4 +1,8 @@
-﻿using System.Net;
+﻿using System.Collections;
+using System.IO;
+using System.IO.Compression;
+using System.Net;
+using System.Text;
 
 
 
@@ -65,12 +69,12 @@ namespace TestGZipSample
             {
                 var httpResponse = await _client.SendAsync(requestMessage);
                 statusCode = httpResponse.StatusCode;
-                if (statusCode == HttpStatusCode.OK)
+                if (statusCode == HttpStatusCode.OK && httpResponse.Headers.GetValues("Content-Encoding").Contains("gzip"))
                 {
                     return new ApiResponse
                     {
                         Data = httpResponse.IsSuccessStatusCode && !statusCode.Equals(HttpStatusCode.NoContent)
-                        ? await httpResponse.Content.ReadAsStringAsync()
+                        ? UncompressData(await httpResponse.Content.ReadAsStringAsync())
                         : string.Empty,
                         StatusCode = statusCode
                     };
@@ -92,7 +96,33 @@ namespace TestGZipSample
             }
         }
 
-        protected Uri GetUri(string baseUri, string endpoint, Dictionary<string, string> parameters = null)
+        public static string UncompressData(string data)
+        {
+            byte[] compressedData = System.Text.Encoding.UTF8.GetBytes(data);
+            string uncompressedData;
+
+            using (var compressedStream = new MemoryStream(compressedData))
+            using (var uncompressedStream = new MemoryStream())
+            {
+                using (GZipStream decompressionStream = new(compressedStream, CompressionMode.Decompress))
+                {
+                    try
+                    {
+                        decompressionStream.CopyTo(uncompressedStream);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.Message);
+                    }
+                }
+                using StreamReader reader = new(uncompressedStream, Encoding.UTF8);
+                uncompressedData = reader.ReadToEnd(); // Read the stream to a string
+            }
+
+            return uncompressedData;
+        }
+
+        protected static Uri GetUri(string baseUri, string endpoint, Dictionary<string, string> parameters = null)
         {
             var builder = new UriBuilder($"{baseUri}{endpoint}");
 
@@ -106,7 +136,7 @@ namespace TestGZipSample
             return builder.Uri;
         }
 
-        protected HttpRequestMessage GetHttpPostRequestMessage(string endPoint, string requestBody)
+        protected static HttpRequestMessage GetHttpPostRequestMessage(string endPoint, string requestBody)
         {
             var token = "XXX";
             var requestMessage = new HttpRequestMessage()
@@ -124,7 +154,7 @@ namespace TestGZipSample
             return requestMessage;
         }
 
-        protected HttpRequestMessage PostBaseRequest(Uri uri, string requestBody, IDictionary<string, string> headers = null)
+        protected static HttpRequestMessage PostBaseRequest(Uri uri, string requestBody, IDictionary<string, string> headers = null)
         {
             var requestMessage = new HttpRequestMessage
             {
@@ -172,6 +202,5 @@ namespace TestGZipSample
                 throw new DownloadFailedException(exception.Message, statusCode);
             }
         }
-
     }
 }

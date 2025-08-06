@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
+using System.IO.Compression;
 
 namespace TestGZipSample;
 
@@ -38,7 +39,5 @@ public class Function1
         }
 
         return new OkObjectResult("Failure");
-
-
     }
 }
