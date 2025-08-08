@@ -2,6 +2,7 @@
 using System.IO;
 using System.IO.Compression;
 using System.Net;
+using System.Runtime.Intrinsics.Arm;
 using System.Text;
 
 
@@ -18,6 +19,7 @@ namespace TestGZipSample
         private const string UserName = "X-RMG-USERNAME";
         private const string AcceptEncoding = "Accept-Encoding";
         private const string AcceptEncodingValue = "gzip";
+        private const bool AcceptGzipEncoding = true;
         private readonly HttpClient _client;
         internal readonly HttpClientHandler _handler;
 
@@ -26,7 +28,7 @@ namespace TestGZipSample
         {
             _handler = new HttpClientHandler
             {
-                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
+                AutomaticDecompression = DecompressionMethods.None,
             };
             _client ??= new HttpClient(_handler)
             {
@@ -45,8 +47,14 @@ namespace TestGZipSample
             requestMessage.Headers.Add(RMGMessageId, Guid.NewGuid().ToString());
             requestMessage.Headers.Add(DeviceId,"6876786");
             requestMessage.Headers.Add(UserName, "Sim");
-            requestMessage.Headers.Add(AcceptEncoding, AcceptEncodingValue);
-          //  requestMessage.Headers.Add("X-RMG-CLIENT-ID", "973fd29c-08c2-4f0a-a974-80188c9da8b1");
+            requestMessage.Headers.Add("X-RMG-CLIENT-ID", "973fd29c-08c2-4f0a-a974-80188c9da8b1");
+            //requestMessage.Headers.Add(AcceptEncoding, AcceptEncodingValue);
+
+            if (AcceptGzipEncoding)
+            {
+                _client.DefaultRequestHeaders.AcceptEncoding.Add(new System.Net.Http.Headers.StringWithQualityHeaderValue("gzip"));
+            }
+        
 
             //if (CoreAppData.Instance.AccessToken != null)
             //{
@@ -72,32 +80,23 @@ namespace TestGZipSample
             {
                 var httpResponse = await _client.SendAsync(requestMessage);
                 statusCode = httpResponse.StatusCode;
-                if (statusCode == HttpStatusCode.OK && httpResponse.Headers.GetValues("Content-Encoding").Contains("gzip"))
-                {
+                
                     return new ApiResponse
                     {
-                        Data = httpResponse.IsSuccessStatusCode && !statusCode.Equals(HttpStatusCode.NoContent)
-                        ? UncompressData(await httpResponse.Content.ReadAsStringAsync())
+                        Data = httpResponse.IsSuccessStatusCode 
+                        ? await ReadContentAsString(httpResponse)
                         : string.Empty,
                         StatusCode = statusCode
                     };
-                }
-                else
-                {
-                    return new ApiResponse
-                    {
-                        Data = httpResponse.IsSuccessStatusCode && !statusCode.Equals(HttpStatusCode.NoContent)
-                       ? await httpResponse.Content.ReadAsStringAsync()
-                       : string.Empty,
-                        StatusCode = statusCode
-                    };
-                }
+                
             }
             catch (Exception exception)
             {
                 throw new DownloadFailedException(exception.Message, statusCode);
             }
         }
+
+
 
         public static string UncompressData(string data)
         {
@@ -125,7 +124,23 @@ namespace TestGZipSample
             return uncompressedData;
         }
 
-        protected static Uri GetUri(string baseUri, string endpoint, Dictionary<string, string> parameters = null)
+        private static async Task<string> ReadContentAsString(HttpResponseMessage response)
+        {
+            // Check whether response is compressed
+            if (response.Content.Headers.ContentEncoding.Any(x => x == "gzip"))
+            {
+                // Decompress manually
+                using var s = await response.Content.ReadAsStreamAsync();
+                using var decompressed = new GZipStream(s, CompressionMode.Decompress);
+                using StreamReader rdr = new(decompressed);
+                return await rdr.ReadToEndAsync();
+            }
+            else
+                // Use standard implementation if not compressed
+                return await response.Content.ReadAsStringAsync();
+            }
+
+            protected static Uri GetUri(string baseUri, string endpoint, Dictionary<string, string> parameters = null)
         {
             var builder = new UriBuilder($"{baseUri}{endpoint}");
 
