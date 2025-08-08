@@ -16,6 +16,8 @@ namespace TestGZipSample
         private const string RMGMessageId = "X-RMG-MESSAGE-ID";
         private const string DeviceId = "X-RMG-DEVICE-ID";
         private const string UserName = "X-RMG-USERNAME";
+        private const string AcceptEncoding = "Accept-Encoding";
+        private const string AcceptEncodingValue = "gzip";
         private readonly HttpClient _client;
         internal readonly HttpClientHandler _handler;
 
@@ -43,7 +45,8 @@ namespace TestGZipSample
             requestMessage.Headers.Add(RMGMessageId, Guid.NewGuid().ToString());
             requestMessage.Headers.Add(DeviceId,"6876786");
             requestMessage.Headers.Add(UserName, "Sim");
-            requestMessage.Headers.Add(Accept, AcceptValue);
+            requestMessage.Headers.Add(AcceptEncoding, AcceptEncodingValue);
+          //  requestMessage.Headers.Add("X-RMG-CLIENT-ID", "973fd29c-08c2-4f0a-a974-80188c9da8b1");
 
             //if (CoreAppData.Instance.AccessToken != null)
             //{

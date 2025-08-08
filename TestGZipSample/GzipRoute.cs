@@ -36,7 +36,7 @@ public class GZipRouteApi : ApiBase
             //{ XRmgLanguage, XRmgLanguageValue },
             //{ XRmgDateTime, _dateUtils.GetBritishTimeWithOffset(DateTime.UtcNow) },
             //{ XRmgClientId, _guidGenerator.GetNewGuid().ToString() },
-            { AcceptEncoding, AcceptEncodingValue }
+            //{ AcceptEncoding, AcceptEncodingValue }
         };
 
         var httpMessage = GetBaseRequest(uri, headers);

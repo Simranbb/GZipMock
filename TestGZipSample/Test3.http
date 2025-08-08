@@ -1,0 +1,4 @@
+# For more info on HTTP files go to https://aka.ms/vs/httpfile
+https://rmg-ne-als-dev-fadpsapi01.azurewebsites.net:443/api/UpdatedRoutes?fromDate=2024-07-17&toDate=2025-07-20
+X-RMG-CLIENT-ID:973fd29c-08c2-4f0a-a974-80188c9da8b1 
+Accept: application/json 
